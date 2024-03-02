@@ -31,7 +31,7 @@
     "@nestjs/throttler": "^5.1.2",
     "@st-achievements/database": "^1.0.5",
     "@st-api/core": "~4.4.1",
-    "@st-api/firebase": "~3.0.0",
+    "@st-api/firebase": "~3.0.1",
     "drizzle-orm": "^0.29.4",
     "express": "~4.18.3",
     "firebase": "^10.8.1",
