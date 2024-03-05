@@ -7,8 +7,9 @@ import {
   Logger,
   PubSub,
 } from '@st-api/firebase';
-import { and, eq, inArray, notExists, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
 
+import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
 import {
   ACHIEVEMENT_PROCESSOR_QUEUE,
@@ -54,6 +55,7 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
         and(
           notExists(notExistsUsrAchievements),
           eq(ach.achievement.active, true),
+          not(eq(ach.achievement.levelId, AchievementLevelEnum.Platinum)),
           or(
             inArray(ach.achievement.workoutTypeCondition, [
               'any',
@@ -77,8 +79,11 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
     this.logger.log('uniqAchievementIds', { uniqAchievementIds });
     for (const achievementId of uniqAchievementIds) {
       const message: AchievementProcessorDto = {
-        workout: event,
         achievementId,
+        userId: event.userId,
+        periodId: event.periodId,
+        workoutDate: event.startedAt.toISOString(),
+        workoutId: event.workoutId,
       };
       await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
         json: message,
