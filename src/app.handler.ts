@@ -77,18 +77,16 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
       (achievementId) => achievementId,
     );
     this.logger.log('uniqAchievementIds', { uniqAchievementIds });
-    for (const achievementId of uniqAchievementIds) {
-      const message: AchievementProcessorDto = {
-        achievementId,
-        userId: event.userId,
-        periodId: event.periodId,
-        workoutDate: event.startedAt.toISOString(),
-        workoutId: event.workoutId,
-      };
-      await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
-        json: message,
-      });
-    }
+    const message: AchievementProcessorDto = {
+      achievementIds: uniqAchievementIds,
+      userId: event.userId,
+      periodId: event.periodId,
+      workoutDate: event.startedAt.toISOString(),
+      workoutId: event.workoutId,
+    };
+    await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
+      json: message,
+    });
   }
 }
 

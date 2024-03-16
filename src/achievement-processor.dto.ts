@@ -1,5 +1,5 @@
 export interface AchievementProcessorDto {
-  achievementId: number;
+  achievementIds: number[];
   workoutDate: string;
   userId: number;
   periodId: number;
