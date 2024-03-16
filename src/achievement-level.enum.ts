@@ -1,3 +1,3 @@
 export enum AchievementLevelEnum {
-  Platinum = 1,
+  Platinum = 4,
 }
