@@ -7,7 +7,7 @@ import {
   Logger,
   PubSub,
 } from '@st-api/firebase';
-import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
 
 import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
@@ -71,22 +71,29 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
             ),
           ),
         ),
-      );
+      )
+      .orderBy(asc(ach.achievement.id));
     const uniqAchievementIds = arrayUniqBy(
       achievements.map((achievement) => achievement.achievementId),
       (achievementId) => achievementId,
     );
     this.logger.log('uniqAchievementIds', { uniqAchievementIds });
-    const message: AchievementProcessorDto = {
-      achievementIds: uniqAchievementIds,
-      userId: event.userId,
-      periodId: event.periodId,
-      workoutDate: event.startedAt.toISOString(),
-      workoutId: event.workoutId,
-    };
-    await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
-      json: message,
-    });
+    for (const achievementId of uniqAchievementIds) {
+      this.logger.log(`publishing achievementId = ${achievementId}`, {
+        achievementId,
+      });
+      const message: AchievementProcessorDto = {
+        achievementId,
+        userId: event.userId,
+        periodId: event.periodId,
+        workoutDate: event.startedAt.toISOString(),
+        workoutId: event.workoutId,
+      };
+      await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
+        json: message,
+      });
+    }
+    this.logger.log('all achievements published!');
   }
 }
 
