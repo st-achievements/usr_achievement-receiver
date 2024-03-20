@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { ach, Drizzle, usr } from '@st-achievements/database';
-import { arrayUniqBy } from '@st-api/core';
 import {
   createEventarcHandler,
   EventarcHandler,
@@ -15,6 +14,7 @@ import {
   ACHIEVEMENT_PROCESSOR_QUEUE,
   WORKOUT_CREATED_EVENT,
 } from './app.constants.js';
+import { arrayChunks } from './util.js';
 import { WorkoutInputDto } from './workout-input.dto.js';
 
 @Injectable()
@@ -40,7 +40,7 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
         ),
       );
     const achievements = await this.drizzle
-      .select({
+      .selectDistinct({
         achievementId: ach.achievement.id,
       })
       .from(ach.achievement)
@@ -73,25 +73,33 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
         ),
       )
       .orderBy(asc(ach.achievement.id));
-    const uniqAchievementIds = arrayUniqBy(
-      achievements.map((achievement) => achievement.achievementId),
-      (achievementId) => achievementId,
+    const allAchievementIds = achievements.map(
+      (achievement) => achievement.achievementId,
     );
-    this.logger.log('uniqAchievementIds', { uniqAchievementIds });
-    for (const achievementId of uniqAchievementIds) {
-      this.logger.log(`publishing achievementId = ${achievementId}`, {
-        achievementId,
-      });
-      const message: AchievementProcessorDto = {
-        achievementId,
-        userId: event.userId,
-        periodId: event.periodId,
-        workoutDate: event.startedAt.toISOString(),
-        workoutId: event.workoutId,
-      };
-      await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
-        json: message,
-      });
+    this.logger.log('allAchievementIds', { allAchievementIds });
+    const achievementIdsChunks = arrayChunks(allAchievementIds, 10);
+    const partialEvent: Omit<AchievementProcessorDto, 'achievementId'> = {
+      userId: event.userId,
+      periodId: event.periodId,
+      workoutDate: event.startedAt.toISOString(),
+      workoutId: event.workoutId,
+    };
+    for (const achievementIds of achievementIdsChunks) {
+      this.logger.log(
+        `publishing achievementIds = ${JSON.stringify(achievementIds)}`,
+        { achievementIds },
+      );
+      await Promise.all(
+        achievementIds.map(async (achievementId) => {
+          const message: AchievementProcessorDto = {
+            ...partialEvent,
+            achievementId,
+          };
+          await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
+            json: message,
+          });
+        }),
+      );
     }
     this.logger.log('all achievements published!');
   }
