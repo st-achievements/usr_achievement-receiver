@@ -6,7 +6,7 @@ import {
   Logger,
   PubSub,
 } from '@st-api/firebase';
-import { and, asc, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
 
 import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
@@ -14,7 +14,6 @@ import {
   ACHIEVEMENT_PROCESSOR_QUEUE,
   WORKOUT_CREATED_EVENT,
 } from './app.constants.js';
-import { arrayChunks } from './util.js';
 import { WorkoutInputDto } from './workout-input.dto.js';
 
 @Injectable()
@@ -71,36 +70,21 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
             ),
           ),
         ),
-      )
-      .orderBy(asc(ach.achievement.id));
-    const allAchievementIds = achievements.map(
+      );
+    const achievementIds = achievements.map(
       (achievement) => achievement.achievementId,
     );
-    this.logger.log('allAchievementIds', { allAchievementIds });
-    const achievementIdsChunks = arrayChunks(allAchievementIds, 10);
-    const partialEvent: Omit<AchievementProcessorDto, 'achievementId'> = {
+    this.logger.log('achievementIds', { achievementIds });
+    const achievementProcessorDto: AchievementProcessorDto = {
       userId: event.userId,
       periodId: event.periodId,
       workoutDate: event.startedAt.toISOString(),
       workoutId: event.workoutId,
+      achievementIds,
     };
-    for (const achievementIds of achievementIdsChunks) {
-      this.logger.log(
-        `publishing achievementIds = ${JSON.stringify(achievementIds)}`,
-        { achievementIds },
-      );
-      await Promise.all(
-        achievementIds.map(async (achievementId) => {
-          const message: AchievementProcessorDto = {
-            ...partialEvent,
-            achievementId,
-          };
-          await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
-            json: message,
-          });
-        }),
-      );
-    }
+    await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
+      json: achievementProcessorDto,
+    });
     this.logger.log('all achievements published!');
   }
 }
