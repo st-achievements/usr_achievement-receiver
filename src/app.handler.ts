@@ -15,6 +15,7 @@ import {
   WORKOUT_CREATED_EVENT,
 } from './app.constants.js';
 import { WorkoutInputDto } from './workout-input.dto.js';
+import { z } from 'zod';
 
 @Injectable()
 export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
@@ -89,8 +90,22 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
   }
 }
 
+const LoggerContextSchema = z.object({
+  body: z.object({
+    userId: z.number(),
+    workoutId: z.number(),
+  }),
+});
+
 export const appHandler = createEventarcHandler({
   handler: AppHandler,
   schema: () => WorkoutInputDto,
   eventType: WORKOUT_CREATED_EVENT,
+  loggerContext: (event) => {
+    const result = LoggerContextSchema.safeParse(event.data);
+    if (result.success) {
+      const { userId, workoutId } = result.data.body;
+      return `u${userId}-w${workoutId}`;
+    }
+  },
 });
