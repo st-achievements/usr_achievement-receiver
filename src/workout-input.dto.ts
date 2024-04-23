@@ -14,7 +14,6 @@ export const WorkoutInputDto = z.object({
   duration: z.number(),
   distance: z.number().optional(),
   workoutTypeId: z.number(),
-  workoutTypeName: z.string(),
   workoutName: z.string().optional(),
   energyBurned: z.number(),
   userId: z.number(),

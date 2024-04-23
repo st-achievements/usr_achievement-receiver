@@ -7,6 +7,7 @@ import {
   PubSub,
 } from '@st-api/firebase';
 import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
@@ -15,7 +16,6 @@ import {
   WORKOUT_CREATED_EVENT,
 } from './app.constants.js';
 import { WorkoutInputDto } from './workout-input.dto.js';
-import { z } from 'zod';
 
 @Injectable()
 export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
