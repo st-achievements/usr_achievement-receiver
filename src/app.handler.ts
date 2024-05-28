@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { PubSubService } from '@st-achievements/core';
 import { ach, Drizzle, usr } from '@st-achievements/database';
 import {
   createEventarcHandler,
   EventarcHandler,
   Logger,
-  PubSub,
 } from '@st-api/firebase';
 import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
-import { z } from 'zod';
 
 import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
@@ -21,12 +20,13 @@ import { WorkoutInputDto } from './workout-input.dto.js';
 export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
   constructor(
     private readonly drizzle: Drizzle,
-    private readonly pubSub: PubSub,
+    private readonly pubSubService: PubSubService,
   ) {}
 
   private readonly logger = Logger.create(this);
 
   async handle(event: WorkoutInputDto): Promise<void> {
+    Logger.setContext(`u${event.userId}-w${event.workoutId}`);
     this.logger.log('event', { event });
     const notExistsUsrAchievements = this.drizzle
       .select({ 1: sql`1` })
@@ -83,29 +83,15 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
       workoutId: event.workoutId,
       achievementIds,
     };
-    await this.pubSub.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
+    await this.pubSubService.publish(ACHIEVEMENT_PROCESSOR_QUEUE, {
       json: achievementProcessorDto,
     });
     this.logger.log('all achievements published!');
   }
 }
 
-const LoggerContextSchema = z.object({
-  body: z.object({
-    userId: z.number(),
-    workoutId: z.number(),
-  }),
-});
-
 export const appHandler = createEventarcHandler({
   handler: AppHandler,
   schema: () => WorkoutInputDto,
   eventType: WORKOUT_CREATED_EVENT,
-  loggerContext: (event) => {
-    const result = LoggerContextSchema.safeParse(event.data);
-    if (result.success) {
-      const { userId, workoutId } = result.data.body;
-      return `u${userId}-w${workoutId}`;
-    }
-  },
 });

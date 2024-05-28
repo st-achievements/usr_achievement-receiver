@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
-import { DrizzleOrmModule } from '@st-achievements/database';
+import { AchievementsCoreModule } from '@st-achievements/core';
 import { CoreModule } from '@st-api/core';
-import { FirebaseAdminModule, PubSubModule } from '@st-api/firebase';
 
 import { AppHandler } from './app.handler.js';
 
 @Module({
   imports: [
     CoreModule.forRoot(),
-    FirebaseAdminModule.forRoot(),
-    DrizzleOrmModule,
-    PubSubModule,
+    AchievementsCoreModule.forRoot({
+      authentication: false,
+      throttling: false,
+    }),
   ],
   controllers: [],
   providers: [AppHandler],
