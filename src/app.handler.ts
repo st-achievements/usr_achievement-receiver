@@ -94,4 +94,7 @@ export const appHandler = createEventarcHandler({
   handler: AppHandler,
   schema: () => WorkoutInputDto,
   eventType: WORKOUT_CREATED_EVENT,
+  // https://cloud.google.com/eventarc/standard/docs/third-parties/create-channels
+  // Only some regions are supported for eventarc triggers
+  region: 'us-central1',
 });
