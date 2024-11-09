@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { PubSubService } from '@st-achievements/core';
 import { ach, Drizzle, usr } from '@st-achievements/database';
 import {
@@ -6,7 +5,7 @@ import {
   EventarcHandler,
   Logger,
 } from '@st-api/firebase';
-import { and, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, not, notExists, or, sql } from 'drizzle-orm';
 
 import { AchievementLevelEnum } from './achievement-level.enum.js';
 import { AchievementProcessorDto } from './achievement-processor.dto.js';
@@ -15,6 +14,7 @@ import {
   WORKOUT_CREATED_EVENT,
 } from './app.constants.js';
 import { WorkoutInputDto } from './workout-input.dto.js';
+import { Injectable } from '@stlmpp/di';
 
 @Injectable()
 export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
@@ -36,7 +36,7 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
           eq(usr.achievement.userId, event.userId),
           eq(usr.achievement.periodId, event.periodId),
           eq(usr.achievement.achAchievementId, ach.achievement.id),
-          eq(usr.achievement.active, true),
+          isNull(usr.achievement.inactivatedAt),
         ),
       );
     const achievements = await this.drizzle
@@ -48,13 +48,13 @@ export class AppHandler implements EventarcHandler<typeof WorkoutInputDto> {
         ach.achievementWorkoutType,
         and(
           eq(ach.achievementWorkoutType.achievementId, ach.achievement.id),
-          eq(ach.achievementWorkoutType.active, true),
+          isNull(ach.achievementWorkoutType.inactivatedAt),
         ),
       )
       .where(
         and(
           notExists(notExistsUsrAchievements),
-          eq(ach.achievement.active, true),
+          isNull(ach.achievement.inactivatedAt),
           not(eq(ach.achievement.levelId, AchievementLevelEnum.Platinum)),
           or(
             inArray(ach.achievement.workoutTypeCondition, [
